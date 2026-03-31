@@ -124,7 +124,76 @@ module sync_fifo_tb;
         $display("TEST 3 - Final state: time=%0t | wr_ptr=%0d rd_ptr=%0d count=%0d empty=%0b full=%0b",
                   $time, dut.wr_ptr, dut.rd_ptr, dut.count, empty, full);
 
+        // ------------------------------------------------------------
+        // Reset before TEST 4
+        // Ensure TEST 4 starts from a clean state
+        // ------------------------------------------------------------
+        #2;
+        rst_n = 0;
+        #10;
+        rst_n = 1;
+
+        $display("Before TEST 4 (after reset): time=%0t | wr_ptr=%0d rd_ptr=%0d count=%0d empty=%0b full=%0b",
+                  $time, dut.wr_ptr, dut.rd_ptr, dut.count, empty, full);
+
+        // ------------------------------------------------------------
+        // TEST 4: Full condition test
+        // Goal:
+        // Fill the FIFO completely and verify that full is asserted.
+        // Then attempt one extra write and verify that the FIFO state
+        // does not change.
+        // Expected:
+        // After 8 writes: count = 8, full = 1, empty = 0
+        // After extra write: count and wr_ptr should not change
+        // ------------------------------------------------------------
+        data_in = 8'h01; wr_en = 1; #10; wr_en = 0;
+        data_in = 8'h02; wr_en = 1; #10; wr_en = 0;
+        data_in = 8'h03; wr_en = 1; #10; wr_en = 0;
+        data_in = 8'h04; wr_en = 1; #10; wr_en = 0;
+        data_in = 8'h05; wr_en = 1; #10; wr_en = 0;
+        data_in = 8'h06; wr_en = 1; #10; wr_en = 0;
+        data_in = 8'h07; wr_en = 1; #10; wr_en = 0;
+        data_in = 8'h08; wr_en = 1; #10; wr_en = 0;
+
+        $display("TEST 4 - After 8 writes: time=%0t | wr_ptr=%0d rd_ptr=%0d count=%0d empty=%0b full=%0b",
+                  $time, dut.wr_ptr, dut.rd_ptr, dut.count, empty, full);
+
+        if (full != 1'b1) begin
+            $display("ERROR: Full condition test failed. FIFO should be full after 8 writes");
+        end else begin
+            $display("PASS: Full condition asserted correctly");
+        end
+
+        if (dut.count != 8) begin
+            $display("ERROR: Full condition test failed. Expected count=8, got %0d", dut.count);
+        end else begin
+            $display("PASS: Count reached 8 correctly");
+        end
+
+        // Save state before illegal extra write
+        // Expected: no change after this write attempt
+        data_in = 8'hFF;
+        wr_en   = 1;
+        #10;
+        wr_en   = 0;
+
+        $display("TEST 4 - After extra write attempt: time=%0t | wr_ptr=%0d rd_ptr=%0d count=%0d empty=%0b full=%0b",
+                  $time, dut.wr_ptr, dut.rd_ptr, dut.count, empty, full);
+
+        if (dut.count != 8) begin
+            $display("ERROR: Illegal write changed count");
+        end else begin
+            $display("PASS: Illegal write did not change count");
+        end
+
+        if (dut.wr_ptr != 0) begin
+            $display("ERROR: Illegal write changed wr_ptr. Expected 0, got %0d", dut.wr_ptr);
+        end else begin
+            $display("PASS: Illegal write did not change wr_ptr");
+        end
+
         $finish;
     end
+
 
 endmodule
